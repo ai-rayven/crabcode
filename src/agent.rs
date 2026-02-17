@@ -1,5 +1,6 @@
 use tokio::sync::mpsc;
-use futures::StreamExt;
+use futures::{StreamExt, TryStreamExt};
+use tokio_util::codec::{FramedRead, LinesCodec};
 use crate::types::{Action};
 use crate::types::{OllamaRequest, Message, OllamaResponse};
 
@@ -50,28 +51,25 @@ impl CodingAgent {
             
             match res {
                 Ok(response) => {
-                    let mut stream = response.bytes_stream();
+                    let stream = response.bytes_stream();
+                    let io_stream = stream.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e));
+                    let reader = tokio_util::io::StreamReader::new(io_stream);
+                    let mut lines = FramedRead::new(reader, LinesCodec::new());
                     let mut final_answer = String::new();
-                    let mut buffer = String::new();
 
-                    while let Some(item) = stream.next().await {
-                        match item {
-                            Ok(chunk) => {
-                                let s = String::from_utf8_lossy(&chunk);
-                                buffer.push_str(&s);
-
-                                while let Some(pos) = buffer.find('\n') {
-                                    let line = buffer.drain(..=pos).collect::<String>();
-
-                                    if let Ok(parsed) = serde_json::from_str::<OllamaResponse>(&line) {
-                                        if let Some(msg) = parsed.message {
-                                            let token = msg.content;
-                                            final_answer.push_str(&token);
-                                            let _ = tx.send(Action::Stream(token)).await;
+                    while let Some(line_result) = lines.next().await {
+                        match line_result {
+                            Ok(line) => {
+                                if let Ok(parsed) = serde_json::from_str::<OllamaResponse>(&line) {
+                                    if let Some(msg) = parsed.message {
+                                        final_answer.push_str(&msg.content);
+                                        if tx.send(Action::Stream(msg.content)).await.is_err() {
+                                            // TODO: need to add some logging or some way to not just lose this error?
+                                            break;
                                         }
-                                        if parsed.done {
-
-                                        }
+                                    }
+                                    if parsed.done {
+                                        // done streaming, this is here to make intent clear and avoid compiler error of dead code for now.
                                     }
                                 }
                             }
