@@ -28,9 +28,32 @@ impl CodingAgent {
     )
     {
         // NOTE: could define as const but this will be dynamic later so leaving here for now.
+        let prompt = "You are an advanced Rust coding agent. \
+        You are designed to help the user understand and write Rust code.\n\
+        You keep your responses short, efficient and concise\n\
+        \n\
+        TOOLS:\n\
+        You have access to a local filesystem. You can read files to understand the codebase.\n\
+        \n\
+        To read a file, you MUST output a tool call in this exact format:\n\
+        <read_file>src/main.rs</read_file>\n\
+        \n\
+        RULES:\n\
+        1. Only read one file at a time.\n\
+        2. After you output the <read_file> tag, STOP generating text immediately. \
+           Wait for the system to provide the file content.\n\
+        3. Do not hallucinate the file content. \
+           If you need to see a file, ask for it using the tool.\n\
+        \n\
+        EXAMPLE:\n\
+        User: 'How does the main loop work?'\n\
+        Assistant: <read_file>src/main.rs</read_file>\n\
+        System: (Returns file content...)\n\
+        Assistant: 'The main loop handles events by...'";
+
         let system_message = Message {
             role: "system".to_string(),
-            content: "You are a helpful assistant".to_string()
+            content: prompt.to_string()
         };
 
         while let Some(command) = rx.recv().await {
@@ -70,7 +93,9 @@ impl CodingAgent {
                                                 }
                                             }
                                             if parsed.done {
-                                                // done streaming, this is here to make intent clear and avoid compiler error of dead code for now.
+                                                if tx.send(Action::Done).await.is_err() {
+                                                    // TODO: need to add logging?
+                                                }
                                             }
                                         }
                                     }

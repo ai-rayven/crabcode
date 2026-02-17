@@ -248,7 +248,9 @@ version = "0.1.0"
 dependencies = [
  "crossterm",
  "futures",
+ "lazy_static",
  "ratatui",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",

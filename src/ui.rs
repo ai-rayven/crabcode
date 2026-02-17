@@ -5,11 +5,12 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Wrap}
 };
-use crate::types::{AgentCommand, AppState};
+use crate::types::{AgentCommand, AppState, ToolCall};
 use tokio::sync::mpsc;
 use crossterm::event::{KeyCode, KeyEventKind, EventStream, Event};
 use futures::StreamExt;
 use crate::types::{Action, Message};
+use crate::tools::{parse_tool_call, execute_read};
 
 pub struct App {
     pub state: AppState,
@@ -111,6 +112,26 @@ impl App {
                                 role: "assistant".to_string(),
                                 content: token
                             });
+                        }
+                    },
+                    Action::Done => {
+                        if let Some(last_msg) = self.state.chat_history.last() {
+                            let content = &last_msg.content;
+
+                            if let ToolCall::ReadFile(path) = parse_tool_call(content) {
+                                let tool_output = execute_read(&path);
+
+                                self.state.chat_history.push(Message {
+                                    role: "user".to_string(),
+                                    content: tool_output
+                                });
+
+                                if self.agent_tx.send(
+                                    AgentCommand::Run(self.state.chat_history.clone())
+                                ).await.is_err() {
+                                    // TODO: log error?
+                                }
+                            }
                         }
                     }
                 }

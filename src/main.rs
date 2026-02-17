@@ -1,6 +1,7 @@
 mod types;
 mod ui;
 mod agent;
+mod tools;
 
 use tokio::sync::mpsc;
 use crate::ui::{App};
@@ -14,7 +15,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tokio::spawn(
         async move {
-            let agent = CodingAgent::new("llama3".to_string());
+            let agent = CodingAgent::new("qwen2.5-coder:7b".to_string());
             agent.run(agent_rx, ui_tx).await;
         }
     );

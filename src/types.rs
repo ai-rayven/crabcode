@@ -29,7 +29,8 @@ pub struct AppState {
 #[derive(Debug, Clone)]
 pub enum Action {
     Response(String),
-    Stream(String)
+    Stream(String),
+    Done
 }
 
 #[derive(Clone)]
@@ -37,3 +38,8 @@ pub enum AgentCommand {
     Run(Vec<Message>)
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum ToolCall {
+    ReadFile(String),
+    None
+}
