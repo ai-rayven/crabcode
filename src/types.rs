@@ -32,3 +32,8 @@ pub enum Action {
     Stream(String)
 }
 
+#[derive(Clone)]
+pub enum AgentCommand {
+    Run(Vec<Message>)
+}
+

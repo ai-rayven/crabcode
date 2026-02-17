@@ -5,12 +5,12 @@ mod agent;
 use tokio::sync::mpsc;
 use crate::ui::{App};
 use crate::agent::{CodingAgent};
-use crate::types::{Action};
+use crate::types::{Action, AgentCommand};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (ui_tx, ui_rx) = mpsc::channel::<Action>(10);
-    let (agent_tx, agent_rx) = mpsc::channel::<String>(10);
+    let (agent_tx, agent_rx) = mpsc::channel::<AgentCommand>(10);
 
     tokio::spawn(
         async move {

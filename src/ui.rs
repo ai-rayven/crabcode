@@ -5,7 +5,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Wrap}
 };
-use crate::types::{AppState};
+use crate::types::{AgentCommand, AppState};
 use tokio::sync::mpsc;
 use crossterm::event::{KeyCode, KeyEventKind, EventStream, Event};
 use futures::StreamExt;
@@ -14,7 +14,7 @@ use crate::types::{Action, Message};
 pub struct App {
     pub state: AppState,
     pub terminal: ratatui::DefaultTerminal,
-    pub agent_tx: mpsc::Sender<String>,
+    pub agent_tx: mpsc::Sender<AgentCommand>,
     pub ui_rx: mpsc::Receiver<Action>,
     pub should_quit: bool,
     pub events: EventStream,
@@ -23,7 +23,7 @@ pub struct App {
 impl App {
     pub fn new(
         terminal: ratatui::DefaultTerminal,
-        agent_tx: mpsc::Sender<String>,
+        agent_tx: mpsc::Sender<AgentCommand>,
         ui_rx: mpsc::Receiver<Action>,
     ) -> Self {
         Self {
@@ -74,11 +74,13 @@ impl App {
                             KeyCode::Enter => {
                                 if !self.state.input_buffer.is_empty() {
                                     let msg = std::mem::take(&mut self.state.input_buffer);
-                                    let _ = self.agent_tx.send(msg.clone()).await; 
                                     self.state.chat_history.push(Message {
                                         role: "user".to_string(),
                                         content: msg
                                     });
+                                    if self.agent_tx.send(AgentCommand::Run(self.state.chat_history.clone())).await.is_err() {
+                                        // TODO: log something here?
+                                    }
                                 }
                             }
                             _ => {}
