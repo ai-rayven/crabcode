@@ -122,7 +122,7 @@ impl App {
                                 let tool_output = execute_read(&path);
 
                                 self.state.chat_history.push(Message {
-                                    role: "user".to_string(),
+                                    role: "system".to_string(),
                                     content: tool_output
                                 });
 
@@ -155,13 +155,22 @@ impl App {
             .map(|msg| {
                 let (prefix, color) = if msg.role == "user" {
                     ("You: ", Color::Blue)
+                } else if msg.role == "system" {
+                    ("Tool Call", Color::Red)
                 } else {
                     ("AI: ", Color::Green)
                 };
 
+                let content = if msg.role == "system" {
+                    "" 
+                }
+                else {
+                    &msg.content
+                };
+
                 Line::from(vec![
                     Span::styled(prefix, Style::default().fg(color).bold()),
-                    Span::raw(&msg.content)
+                    Span::raw(content)
                 ])
             })
             .collect();
